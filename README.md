@@ -74,8 +74,8 @@ The plan is to validate the pipeline on NSynth, then switch to **AudioCaps** (46
 
 | Phase | Description | Status |
 |---|---|---|
-| 1 | Data pipeline — DAC validation, latent extraction, stats | In progress |
-| 2 | StructuralDiT — implement and train Stage 1 | Not started |
+| 1 | Data pipeline — DAC validation, latent extraction, stats | Completed |
+| 2 | StructuralDiT — implement and train Stage 1 | In Progress |
 | 3 | DetailDiT — implement with cross-attention, teacher forcing | Not started |
 | 4 | Integration — end-to-end pipeline, evaluation | Not started |
 
