@@ -105,7 +105,7 @@ This is a one-time offline step. Once latents are on disk, training never touche
 
 ---
 
-### Task 1.4 — Compute and Save Latent Statistics
+### Task 1.4 — Compute and Save Latent Statistics: COMPLETED
 
 **What to do:**
 
@@ -119,7 +119,7 @@ These statistics will be used to normalize the latent space before feeding it to
 
 ---
 
-### Task 1.5 — Choose and Validate the Coarse Resolution
+### Task 1.5 — Choose and Validate the Coarse Resolution : COMPLETED — 6x chosen
 
 **What to do:**
 
@@ -143,22 +143,28 @@ Listen to at least 10 of these. The coarse latent should preserve rhythm and rou
 
 ---
 
-## Decision Log Template
+## Decision Log
 
-For each major choice made in this phase, fill this in:
+**DAC variant**
+Decision: DAC 44kHz variant
+Alternatives considered: Standard 16kHz DAC
+Reason: NSynth is 16kHz but DAC's 44kHz model produces a richer latent space; resampling at encode time is a one-time offline cost.
+Expected outcome: Clean encode/decode round-trip with latent shape [1, 1024, 344] for 4-second clips.
+Actual outcome: Confirmed. Round-trip sounds perceptually clean. Latent std 3.73, within acceptable range.
 
-```
-Decision: [what you chose]
-Alternatives considered: [what else you looked at]
-Reason: [why you chose this]
-Expected outcome: [what you expected to happen]
-Actual outcome: [what actually happened — fill in after]
-```
+**Dataset**
+Decision: NSynth
+Alternatives considered: AudioCaps
+Reason: Fixed duration, consistent structure, narrow distribution — failures will be architectural, not data artifacts. AudioCaps reserved for text-conditioning phase.
+Expected outcome: Uniform latent shapes, easy to batch, no corrupted files.
+Actual outcome: Confirmed. 305,979 files, all 16kHz 4-second mono WAV, zero corrupted.
 
-Minimum entries required before moving to Phase 2:
-- DAC variant chosen (standard vs. 44khz vs. other)
-- Dataset chosen (NSynth vs. AudioCaps)
-- Downsampling factor chosen
+**Downsampling factor**
+Decision: 6x temporal downsampling
+Alternatives considered: 4x, 8x
+Reason: 4x was too conservative — coarse reconstructions sounded nearly identical to the original, leaving Stage 1 little to learn. 8x dropped note tails, losing envelope information Stage 1 needs to model. 6x preserved transient and pitch contour while audibly losing timbral detail.
+Expected outcome: Stage 1 latents carry rhythm, phrase shape, and envelope; Stage 2 fills in spectral detail.
+Actual outcome: Validated by ear across 10 samples. Coarse latent [1, 1024, 57] after pooling, restored to [1, 1024, 344] for decoding.
 
 ---
 

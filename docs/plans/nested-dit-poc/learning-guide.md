@@ -61,25 +61,25 @@ The diffusion model uses this compressed variation due to computational efficent
 **Downsampling factor chosen: what is it, and what did the coarse reconstructions sound like at that factor?**
 *Why this matters: this is the central architectural parameter of the whole PoC. Everything downstream — Stage 1's input size, Stage 2's cross-attention sequence length, VRAM budget — follows from this number.*
 
-> Factor:
-> What 10+ coarse reconstructions sounded like:
-> Why you stopped here rather than going coarser or finer:
+> Factor: 6x
+> What 10+ coarse reconstructions sounded like: 4x: nearly identical to original with slight smearing — too conservative, Stage 1 would have little to learn. 6x: transient and pitch contour both preserved, tail audible — structure survives, detail is lost. 8x: transient often present but tail frequently gone — envelope information lost, too aggressive.
+> Why you stopped here rather than going coarser or finer: 4x is not coarse enough to force a meaningful separation between stages. 8x drops the sustain and release of notes, which are part of the macro structure Stage 1 needs to model. 6x is the highest factor at which both attack and envelope consistently survive.
 
 ---
 
 **DAC variant chosen and any surprises during the smoke test:**
 *Why this matters: DAC version affects expected sample rate and latent shape. If something was surprising here, it will surface again during preprocessing.*
 
-> DAC variant:
-> Anything unexpected during encode/decode:
+> DAC variant: 44100 Hz
+> Anything unexpected during encode/decode: No
 
 ---
 
 **Any corrupted, zero-length, or unexpected files found during dataset audit:**
 *Why this matters: silent bugs from bad data will show up as mysteriously poor training runs with no obvious cause.*
 
-> File count:
-> Sample rate of files:
+> File count: 305,979 files
+> Sample rate of files: 16 Hhz
 > Any anomalies found:
 
 ---
@@ -89,9 +89,10 @@ The diffusion model uses this compressed variation due to computational efficent
 **What did the latent distribution statistics actually look like? (mean, std, min, max — and whether they surprised you)**
 *Why this matters: a latent std outside the range 0.5–10 is a red flag. Knowing what "normal" looks like here calibrates your intuition for later.*
 
-> Mean:
-> Std:
-> Min / Max:
+  "mean": -0.015405998565256596,
+  "std": 3.7252843812262575,
+  "min": -21.267919540405273,
+  "max": 24.141265869140625
 > Did anything surprise you?
 
 ---
@@ -99,8 +100,8 @@ The diffusion model uses this compressed variation due to computational efficent
 **After listening to 10+ coarse reconstructions at your chosen factor, describe in plain language what survived and what was lost:**
 *Why this matters: this is the clearest early evidence of what Stage 1 will and will not be able to learn. Writing it down now gives you a baseline to compare against Stage 1's actual samples in Phase 2.*
 
-> What survived (rhythm, rough pitch, phrase shape, etc.):
-> What was lost (timbre, fine harmonics, etc.):
+> What survived (rhythm, rough pitch, phrase shape, etc.): Transient and rough pitch
+> What was lost (timbre, fine harmonics, etc.): Higher harmonics
 > Anything unexpected?
 
 ---

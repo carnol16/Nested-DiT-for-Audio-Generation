@@ -1,0 +1,4 @@
+coarse_downsample_factor: 6
+latent_channels: 1024
+latent_time_frames: 344
+sample_rate: 44100
