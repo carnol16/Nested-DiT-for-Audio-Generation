@@ -54,6 +54,7 @@ The diffusion model uses this compressed variation due to computational efficent
 
 > Dataset: NSynth
 > Reason: The goal of the PoC is to verify that the architecture is viable. The job of stage one should be to learn pitch and envelope (ADSR). Stage 2 adds timbre. NSynth gives you a controlled, auditable signal
+> Limitation: NSynth files are one-shots — they have no rhythmic or phrase-level structure. "Structure" in this context means ADSR envelope only. The PoC validates that hierarchical conditioning works (Stage 2 output changes when Stage 1 output changes), not that the model learns long-range musical structure. That claim requires a dataset with actual temporal structure (AudioCaps, music clips) and is deferred to the text-conditioning phase.
 
 
 ---
@@ -109,7 +110,7 @@ The diffusion model uses this compressed variation due to computational efficent
 **What would you do differently in the preprocessing pipeline if you started over?**
 *Why this matters: honest retrospectives compound. A sentence here becomes a useful note before you build the next version.*
 
-> Your answer:
+> Your answer: Nope
 
 ---
 
@@ -122,7 +123,7 @@ The diffusion model uses this compressed variation due to computational efficent
 **Explain adaLN-Zero in your own words. Specifically: why is the final projection initialized to zero, and what goes wrong if you don't?**
 *Why this matters: this is the single most common source of NaN losses in this project. You need to be able to diagnose it before you encounter it.*
 
-> Your answer:
+> Your answer: adaLN-Zero makes the transformer's normalization respond to the noise level, and starts all the gating signals at zero so training doesn't explode
 
 ---
 
@@ -130,7 +131,8 @@ The diffusion model uses this compressed variation due to computational efficent
 *Why this matters: the parameterization affects loss behavior, especially early in training. Understanding the tradeoff helps you interpret your loss curve.*
 
 > Epsilon vs. x0 — the difference:
-> What you chose:
+> Noise magnitude is consistent across timestamps while X0 parameterization can produce bllurry predictions at high noise levels due to having to guess the clean signal through heavy nopise. This is more diffcult and creates less stable gradients.
+What was chosen: Epsilon
 > Why:
 
 ---
@@ -138,14 +140,14 @@ The diffusion model uses this compressed variation due to computational efficent
 **What does "convergence" mean for a diffusion model training run, and how will you recognize it from the loss curve?**
 *Why this matters: "train until convergence" is meaningless if you don't know what a converged curve looks like. This is your definition before you see the data.*
 
-> Your answer:
+> Your answer: COnvergance is when the MSE is long longer dropping, just flucating around the floor. Youll notice this if the loss has not improved after approx 5000 steps
 
 ---
 
 **What is DDIM sampling, and why is it used for monitoring rather than DDPM during training?**
 *Why this matters: you will be generating monitoring samples every 5K steps using DDIM. Knowing why it was chosen (and what it trades off) helps you interpret sample quality correctly.*
 
-> Your answer:
+> Your answer: DDIM is faster than standard DDPM due to it being a deterministic version of DDPM sampling 
 
 ---
 
