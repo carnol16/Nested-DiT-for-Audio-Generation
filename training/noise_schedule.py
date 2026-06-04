@@ -15,7 +15,7 @@ class NoiseSchedule:
         #x0: [B, C, T_coarse] - clean latent
         #t: [B]
         #This returns noisy latent at timestep t
-        ab = self.alpha_bar[t].to(x0.device)#[B]
+        ab = self.alpha_bar[t.cpu()].to(x0.device)
         ab = ab.view(-1,1,1) #[B,1,1] for broadcasting
         noise = torch.randn_like(x0)
         #Returns both the noisy sample and the noise
