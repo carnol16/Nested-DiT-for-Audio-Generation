@@ -71,7 +71,7 @@ The implementation should follow the standard transformer sinusoidal positional 
 
 ---
 
-### Task 2.2 — Implement adaLN-Zero
+### Task 2.2 — Implement adaLN-Zero COMPLETE
 
 **What to do:**
 
@@ -90,7 +90,7 @@ The structure is:
 
 ---
 
-### Task 2.3 — Implement the DiT Transformer Block
+### Task 2.3 — Implement the DiT Transformer Block COMPLETED
 
 **What to do:**
 
@@ -107,7 +107,7 @@ This block is the fundamental building unit. StructuralDiT stacks 6–8 of these
 
 ---
 
-### Task 2.4 — Implement StructuralDiT
+### Task 2.4 — Implement StructuralDiT COMPLETE
 
 **What to do:**
 
@@ -131,7 +131,7 @@ A patchification layer may or may not be needed depending on how you treat the t
 
 ---
 
-### Task 2.5 — Build the Latent Dataset and DataLoader
+### Task 2.5 — Build the Latent Dataset and DataLoader COMPLETE
 
 **What to do:**
 
@@ -150,7 +150,7 @@ The DataLoader should use multiple workers and pin memory for GPU efficiency.
 
 ---
 
-### Task 2.6 — Implement the Noise Schedule
+### Task 2.6 — Implement the Noise Schedule COMPLETE
 
 **What to do:**
 

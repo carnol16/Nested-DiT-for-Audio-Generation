@@ -1,7 +1,7 @@
 import os
 import torch
 import torch.nn as nn
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import autocast, GradScaler
 from pathlib import Path
 from data.dataset import get_dataloader
 from models.structural_dit import StructuralDiT
@@ -42,7 +42,7 @@ def train():
     model = StructuralDiT(IN_CHANNELS, HIDDEN_DIM, DEPTH, NUM_HEADS).to(device)
     model.gradient_checkpointing_enable() if hasattr(model, 'gradient_checkpointing_enable') else None
     optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
-    scaler = GradScaler()
+    scaler = GradScaler('cuda')
 
     if device.type == "cuda":
         print(torch.cuda.memory_summary(device))
@@ -57,7 +57,7 @@ def train():
             t = torch.randint(0, schedule.T, (x0.shape[0],), device=device)
             xt, noise = schedule.q_sample(x0, t)
 
-            with autocast():
+            with autocast('cuda'):
                 pred = model(xt, t)
                 loss = nn.functional.mse_loss(pred, noise)
             

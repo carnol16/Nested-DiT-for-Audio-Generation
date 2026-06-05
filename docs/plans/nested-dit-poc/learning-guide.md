@@ -147,7 +147,7 @@ What was chosen: Epsilon
 **What is DDIM sampling, and why is it used for monitoring rather than DDPM during training?**
 *Why this matters: you will be generating monitoring samples every 5K steps using DDIM. Knowing why it was chosen (and what it trades off) helps you interpret sample quality correctly.*
 
-> Your answer: DDIM is faster than standard DDPM due to it being a deterministic version of DDPM sampling 
+> Your answer: DDIM is faster than standard DDPM due to it being a deterministic version of DDPM sampling.This meaning thatt the same noise input always produces the same sample. That is what makes monitoring useful;you can track the same noise vector across checkpoints to see improvement directly.
 
 ---
 
@@ -156,37 +156,40 @@ What was chosen: Epsilon
 **StructuralDiT architecture: layers, hidden dimension, attention heads, and the reasoning behind each:**
 *Why this matters: these numbers determine VRAM usage and model capacity. Write down your reasoning now — "it fit" is fine, but be specific about what you tried and what didn't.*
 
-> Layers:
-> Hidden dimension:
-> Attention heads:
-> Reasoning:
-> Parameter count:
+> Layers: 6
+> Hidden dimension: 256
+> Attention heads: 4
+> Parameter count: approx. 7.5m
+> Reasoning: These paramenters seemed to be a set of safe parameters to have a quick PoC testing and light VRAM usage
+
 
 ---
 
 **Stable batch size and how you found it:**
 *Why this matters: future you will want to know the VRAM ceiling for this model, especially when loading both stages simultaneously in Phase 4.*
 
-> Batch size:
-> What you tried:
-> Peak VRAM at this batch size:
+>Batch size: 32
+>What you tried: 4 (0.18 GB), 8 (0.20 GB), 16 (0.26 GB), 32 (0.37 GB) — all fit
+>Peak VRAM at this batch size: 0.37 GB
+
 
 ---
 
 **Did you use patchification? Why or why not?**
 *Why this matters: patchification changes the effective sequence length and the nature of what each token represents. Your answer here informs how you think about Stage 2's cross-attention sequence lengths.*
 
-> Used patchification: yes / no
-> Reasoning:
+> Used patchification: no
+> Reasoning: After 6X temporal downsampling the coarse sequence is only 58 frames which is short enough to atten over directly. Patchifcation reduces sequence length for computational efficienct, but at 58 tokens there is no gain. Further reducing the sequence would only discard the temporal structure Stage 1 is meant to learn.
 
 ---
 
 **Optimizer settings: learning rate, weight decay, scheduler (if any):**
 
-> LR:
-> Weight decay:
-> Scheduler:
-> Any adjustments made mid-training and why:
+> LR:1e-4
+> Weight decay: 1e-2
+> Scheduler: none
+> Optimizer: AdamW
+> Any adjustments made mid-training and why: we made no changes , fully ran full 50K steps, but was overkill for this testing with no gain after roughly 5K steps with flattening occuring, fully plattaued 10K
 
 ---
 
@@ -195,11 +198,12 @@ What was chosen: Epsilon
 **Describe the Stage 1 loss curve: when did it start flattening, and what did "near-convergence" actually look like for this run?**
 *Why this matters: your intuition about diffusion model convergence is forming right now. Write down what you observed so you have a reference for Phase 3.*
 
-> Loss at step 1:
-> Loss at step 10K:
-> Loss at step 50K:
-> When did flattening begin:
-> Did it fully plateau or level off gradually:
+> Loss at step 1: 1.3289
+> Loss at step 5K: 0.7673
+> Loss at step 10K: 0.7539
+> Loss at step 50K: ~0.7514
+> When did flattening begin: ~5K
+> Did it fully plateau or level off gradually: 10K - 50K
 
 ---
 
@@ -215,8 +219,8 @@ What was chosen: Epsilon
 **Did you hit NaN losses? If yes, what caused it and how did you fix it?**
 *Why this matters: NaN diagnosis is a skill. Writing down root cause + fix is the most useful debugging log you can keep.*
 
-> Occurred: yes / no
-> If yes — root cause:
+> Occurred: No
+>Only error was due to infrastructure bug this being a device mismatch:  (alpha_bar on CPU, t on CUDA) and import path errors. Once those were fixed the loss was stable throughout
 > Fix:
 
 ---
@@ -224,7 +228,9 @@ What was chosen: Epsilon
 **What would you change about the Stage 1 architecture or training setup if you trained it again?**
 
 > Your answer:
-
+>Start with batch_size=32 — we ran the whole 50K steps at batch_size=4 before testing what fit
+>Add a learning rate warmup for the first 500–1000 steps — the loss dropped fast then hard-plateaued, suggesting the model hit a local minimum early
+>Try hidden_dim=512 — the plateau at 0.75 may indicate the model doesn't have enough capacity for 1024-channel latents at this depth
 ---
 
 ---
@@ -236,21 +242,51 @@ What was chosen: Epsilon
 **Explain cross-attention in your own words: what are queries, keys, and values, and where does each come from in this specific architecture?**
 *Why this matters: the cross-attention mechanism is the core claim of this architecture. If you cannot describe it precisely, you will not be able to diagnose it when it fails to condition.*
 
-> Your answer:
+> Your answer: a foundational deep learning mechanism in transformer models that allows one data sequence (the "query") to extract relevant context from another sequence (the "key" and "value")
+>
+> Queries: This is the search term you type into the search bar. It represents what you are currently looking for or trying to understand
+> Keys: These are the tags/descriptions. Represents index tags of all the available data, used to see if data matches your search.
+> Values: This is the actual data. Once you find the keys that match your query, the algorithm serves you the actual data.
+>
+> In this architecture specifically:
+> - Queries come from Stage 2's full-resolution hidden state `[B, T_full, D]` — each fine-grained frame asks "what coarse structure is relevant to me?"
+> - Keys and Values both come from the projected Stage 1 coarse latent `[B, T_coarse, D]`
+>
+> The computation: `softmax(Q @ K^T / sqrt(d)) @ V` — each T_full position gets a weighted sum over all T_coarse positions. Strong attention to a coarse frame pulls Stage 1's structural information into Stage 2's prediction at that point.
+>
+> The key difference from self-attention: self-attention talks to itself; cross-attention talks to a different sequence. Here Stage 2 talks to Stage 1, letting every fine-grained frame ask "which part of the coarse sketch matters here" without forcing a rigid one-to-one time alignment.
 
----
+
 
 **What is teacher forcing? Why is it used for Stage 2's initial training instead of using Stage 1 model outputs?**
 *Why this matters: teacher forcing is the reason distribution mismatch happens later. Understanding why it was chosen now makes Phase 4's diagnosis less mysterious.*
 
-> Your answer:
+> Your answer: Instead of feeding Stage 2 what Stage 1 actually generates, you feed it the ground-truth coarse latent — the perfect downsampled version of the same clip. Stage 2 always trains on ideal conditioning.
+>
+> We don't use Stage 1's outputs directly because it is an imperfect model. Its generated latents have errors: wrong amplitudes, slightly off distributions, accumulated sampling noise. If Stage 2 trains on those imperfect signals from the start:
+> - **Slower convergence** — Stage 2 is trying to learn detail generation and compensate for Stage 1's mistakes simultaneously
+> - **Harder to diagnose** — if Stage 2 loss doesn't drop, you can't tell if the problem is Stage 2's architecture or Stage 1's noisy conditioning
+>
+> Teacher forcing isolates Stage 2. It lets you confirm the architecture works before introducing the real-world messiness of Stage 1 outputs.
+>
+> **Tradeoff:** Stage 2 trains on perfect coarse latents, but in Phase 4 it receives imperfect Stage 1 outputs. This gap is called distribution mismatch — Stage 2 has never seen conditioning that looks like what Stage 1 actually produces. That is exactly why conditioning dropout exists.
 
 ---
 
 **What is conditioning dropout, and what specific failure mode does it address?**
 *Why this matters: conditioning dropout is the most practical lever for controlling how robust Stage 2 is to imperfect Stage 1 outputs. Your answer here should connect to distribution mismatch.*
 
-> Your answer:
+> Your answer: During Stage 2 training, on a random ~10–20% of steps you replace the coarse latent with Gaussian noise instead of the real conditioning signal. Stage 2 has to generate something reasonable even when the conditioning is garbage.
+>
+> The failure mode it addresses is distribution mismatch. Teacher forcing trains Stage 2 on perfect coarse latents, but in Phase 4, Stage 1 generates coarse latents that look slightly different — wrong scale, different noise profile, subtle distributional shift. A Stage 2 trained only on perfect conditioning will see those Stage 1 outputs as almost foreign inputs and produce poor results.
+>
+> Conditioning dropout teaches Stage 2: "sometimes the conditioning signal is unreliable — don't depend on it completely." This makes it more robust when Phase 4 hands it real Stage 1 outputs instead of ground truth.
+>
+> **Tradeoffs:**
+> - Too high (>30%) — Stage 2 learns to ignore conditioning entirely. Samples won't vary based on Stage 1's output. The whole hierarchy breaks.
+> - Too low (<5%) — Stage 2 stays fragile to distribution mismatch. Phase 4 degradation is severe.
+> - 10–20% is the recommended range — enough robustness, conditioning signal still dominates.
+>Summaring: teacher forcing creates the mismatch problem, conditioning dropout partially solves it. They're two sides of the same tradeoff
 
 ---
 
